@@ -1,0 +1,16 @@
+{
+  "host": "127.0.0.1",
+  "port": 8888,
+  "timeout": 60,
+  "max_expiration": 432000,
+  "max_file_size": 4194304,
+  "jwt_sk_path": "jwt_sk",
+  "aes_key_path": "aes_key",
+  "max_renewal": 5,
+  "db": {
+    "dbname": "cnt5410project",
+    "user": "cnt5410_mgr",
+    "password": "strong_password",
+    "host": "localhost"
+  }
+}

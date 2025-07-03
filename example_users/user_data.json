@@ -1,0 +1,38 @@
+[
+  {
+    "username": "user1",
+    "public_key_path": "keys/user1_public_key.pem",
+    "private_key_path": "keys/user1_private_key.pem",
+    "file_public_key_path": "keys/user1_file_public_key.pem",
+    "file_private_key_path": "keys/user1_file_private_key.pem"
+  },
+  {
+    "username": "user2",
+    "public_key_path": "keys/user2_public_key.pem",
+    "private_key_path": "keys/user2_private_key.pem",
+    "password_path": "passwords/user2_password.txt",
+    "file_public_key_path": "keys/user2_file_public_key.pem",
+    "file_private_key_path": "keys/user2_file_private_key.pem"
+  },
+  {
+    "username": "user3",
+    "public_key_path": "keys/user3_public_key.pem",
+    "private_key_path": "keys/user3_private_key.pem",
+    "file_public_key_path": "keys/user3_file_public_key.pem",
+    "file_private_key_path": "keys/user3_file_private_key.pem"
+  },
+  {
+    "username": "user4",
+    "password_path": "passwords/user4_password.txt",
+    "file_public_key_path": "keys/user4_file_public_key.pem",
+    "file_private_key_path": "keys/user4_file_private_key.pem"
+  },
+  {
+    "username": "user5",
+    "public_key_path": "keys/user5_public_key.pem",
+    "private_key_path": "keys/user5_private_key.pem",
+    "password_disabled": true,
+    "file_public_key_path": "keys/user5_file_public_key.pem",
+    "file_private_key_path": "keys/user5_file_private_key.pem"
+  }
+]

@@ -1,0 +1,6 @@
+{
+  "username": "anonymous",
+  "file_private_key_path": "../example_users/keys/user_ano1_file_private_key.pem",
+  "file_public_key_path": "../example_users/keys/user_ano1_file_public_key.pem",
+  "server_url": "http://127.0.0.1:8888"
+}

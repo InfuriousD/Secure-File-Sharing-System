@@ -1,0 +1,8 @@
+{
+  "username": "user2",
+  "private_key_path": "../example_users/keys/user3_private_key.pem",
+  "public_key_path": "../example_users/keys/user2_public_key.pem",
+  "file_private_key_path": "../example_users/keys/user3_file_private_key.pem",
+  "file_public_key_path": "../example_users/keys/user2_file_public_key.pem",
+  "server_url": "http://127.0.0.1:8888"
+}

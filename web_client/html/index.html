@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>File Management System</title>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <!-- Include Pico.css -->
+    <link href="/resources/pico.min.css" rel="stylesheet">
+    <!-- Minimal Custom CSS -->
+    <style>
+        /* Custom styles for conditional highlighting */
+        .available {
+            background-color: #CCFFE5;
+        }
+
+        .unavailable {
+            background-color: #FFCC99;
+        }
+
+        tr.available td,
+        tr.unavailable td {
+            background-color: inherit; /* Ensure inheritance from <tr> */
+        }
+
+        .icon-button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            vertical-align: middle;
+        }
+
+        .icon-button img {
+            width: 24px; /* Adjust icon size */
+            height: 24px;
+            margin-left: 8px; /* Add space between the text and icon */
+        }
+
+        /* Optional: Add hover effect for visual feedback */
+        .icon-button:hover img {
+            filter: brightness(0.8);
+        }
+
+        /* Style for the file table */
+        .file-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .file-table th, .file-table td {
+            padding: 0.5rem;
+            text-align: left;
+            border-bottom: 1px solid #A0A0A0;
+        }
+
+        .file-table th {
+            background-color: #E0E0E0;
+        }
+
+        /* Style for action icons */
+        .action-icons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .action-icons button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .action-icons img {
+            width: 24px;
+            height: 24px;
+        }
+
+        .toggle-icon {
+            vertical-align: middle;
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            transition: transform 0.2s ease-in-out;
+            margin-right: 5px;
+        }
+
+        /* Style for user group header row */
+        .user-group-header {
+            font-weight: bold;
+            background-color: #C0C0C0;
+        }
+    </style>
+</head>
+<body>
+<main class="container">
+    <h1>File Management System</h1>
+
+    <!-- Upload File Button -->
+    <button onclick="toggleModal('upload-modal')">Upload File</button>
+
+    <!-- Upload Modal -->
+    <dialog id="upload-modal">
+        <article>
+            <header>
+                <h2>Upload File</h2>
+                <a aria-label="Close" class="close" href="#" onclick="toggleModal('upload-modal')"></a>
+            </header>
+            <form id="uploadForm" onsubmit="uploadFile(event)">
+                <label for="fileInput">Select File:</label>
+                <input id="fileInput" required type="file">
+
+                <label for="downloadLimit">Download Limit:</label>
+                <input id="downloadLimit" required type="number" value="0">
+
+                <label for="expirationValue">Expiration:</label>
+                <div class="grid">
+                    <input id="expirationValue" min="1" type="number" value="2">
+                    <select id="expirationUnit">
+                        <option value="seconds">Seconds</option>
+                        <option value="minutes">Minutes</option>
+                        <option selected value="hours">Hours</option>
+                        <option value="days">Days</option>
+                    </select>
+                </div>
+
+                <footer>
+                    <button type="submit">Upload</button>
+                    <button class="secondary" onclick="toggleModal('upload-modal')" type="button">Cancel</button>
+                </footer>
+            </form>
+        </article>
+    </dialog>
+
+    <!-- List Files Section -->
+    <section>
+        <h2>
+            File List
+            <button aria-label="Refresh List" class="icon-button" onclick="listFiles()">
+                <img alt="Refresh List" src="/resources/refresh.svg">
+            </button>
+        </h2>
+        <div id="fileList">
+            <!-- Files will be dynamically inserted here -->
+        </div>
+    </section>
+
+
+    <!-- Share Modal -->
+    <dialog id="share-modal">
+        <article>
+            <header>
+                <h2>Share File</h2>
+                <a aria-label="Close" class="close" href="#" onclick="toggleModal('share-modal')"></a>
+            </header>
+            <form id="shareForm" onsubmit="shareFile(event)">
+                <input id="shareFileId" type="hidden">
+                <label for="shareWithUsername">Share with Username:</label>
+                <input id="shareWithUsername" required type="text">
+                <footer>
+                    <button type="submit">Share</button>
+                    <button class="secondary" onclick="toggleModal('share-modal')" type="button">Cancel</button>
+                </footer>
+            </form>
+        </article>
+    </dialog>
+</main>
+
+<!-- Scripts -->
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        // Refresh the list of files when the page loads
+        listFiles();
+    });
+
+    function toggleModal(id) {
+        const dialog = document.getElementById(id);
+        if (dialog.open) {
+            dialog.close();
+        } else {
+            dialog.showModal();
+        }
+    }
+
+    function formatToLocalTime(utcDateString) {
+        if (!utcDateString) return "N/A";
+        const utcDate = new Date(utcDateString);
+        return utcDate.toLocaleString();
+    }
+
+    // List Files
+    async function listFiles() {
+        const response = await fetch("/list_files");
+        const result = await response.json();
+        const fileListContainer = document.getElementById("fileList");
+        fileListContainer.innerHTML = "";
+
+        const currentUserId = result.user_id;
+
+        if (result.files && result.files.length > 0) {
+            const groupedFiles = groupBy(result.files, "owner_id");
+
+            // Create the file table
+            const fileTable = document.createElement("table");
+            fileTable.classList.add("file-table");
+
+            // Table Head
+            const thead = document.createElement("thead");
+            const headerRow = document.createElement("tr");
+            const headers = ["ID", "Name", "Downloads", "Expiration", "Actions"];
+            headers.forEach(text => {
+                const th = document.createElement("th");
+                th.textContent = text;
+                headerRow.appendChild(th);
+            });
+            thead.appendChild(headerRow);
+            fileTable.appendChild(thead);
+
+            // Table Body
+            const tbody = document.createElement("tbody");
+
+            for (const [userId, files] of Object.entries(groupedFiles)) {
+                // User Group Header Row with Expand/Collapse
+                const userRow = document.createElement("tr");
+                const userCell = document.createElement("td");
+                userCell.colSpan = headers.length;
+                userCell.classList.add("user-group-header");
+
+                const toggleIcon = document.createElement("img");
+                toggleIcon.src = "/resources/expand_down.svg";
+                toggleIcon.alt = "Expand/Collapse";
+                toggleIcon.classList.add("toggle-icon"); // Add a class for styling
+                toggleIcon.dataset.state = "expanded"; // Initial state is expanded
+                toggleIcon.style.transform = "rotate(180deg)"; // Initial rotation
+
+                // Toggle function
+                toggleIcon.onclick = () => {
+                    const isExpanded = toggleIcon.dataset.state === "expanded";
+                    fileRows.forEach(row => {
+                        row.style.display = isExpanded ? "none" : ""; // Hide or show rows
+                    });
+                    toggleIcon.style.transform = isExpanded ? "rotate(0deg)" : "rotate(180deg)";
+                    toggleIcon.dataset.state = isExpanded ? "collapsed" : "expanded";
+                };
+
+                userCell.appendChild(toggleIcon);
+                userCell.appendChild(document.createTextNode(` Files by User ID: ${userId}`));
+                userRow.appendChild(userCell);
+                tbody.appendChild(userRow);
+
+                // File Rows for this User
+                const fileRows = [];
+                files.forEach(file => {
+                    const isExpired = file.expiration_timestamp && new Date(file.expiration_timestamp) < new Date();
+                    const isDownloadLimitReached = file.download_limit > 0 && file.download_count >= file.download_limit;
+                    const isOwnedByCurrentUser = userId == currentUserId;
+                    const isAvailable = !isExpired && !isDownloadLimitReached;
+
+                    const row = document.createElement("tr");
+
+                    // Apply conditional styling
+                    if (isAvailable) {
+                        row.classList.add("available");
+                    } else {
+                        row.classList.add("unavailable");
+                    }
+
+                    // ID Cell
+                    const idCell = document.createElement("td");
+                    idCell.textContent = file.file_id;
+                    row.appendChild(idCell);
+
+                    // Name Cell
+                    const nameCell = document.createElement("td");
+                    nameCell.textContent = file.filename;
+                    row.appendChild(nameCell);
+
+                    // Downloads Cell
+                    const downloadsCell = document.createElement("td");
+                    downloadsCell.textContent = `${file.download_count}/${file.download_limit}`;
+                    if (isDownloadLimitReached) {
+                        downloadsCell.style.color = "red";
+                    }
+                    row.appendChild(downloadsCell);
+
+                    // Expiration Cell
+                    const expirationCell = document.createElement("td");
+                    expirationCell.textContent = formatToLocalTime(file.expiration_timestamp);
+                    if (isExpired) {
+                        expirationCell.style.color = "red";
+                    }
+                    row.appendChild(expirationCell);
+
+                    // Actions Cell
+                    const actionsCell = document.createElement("td");
+                    const actionIcons = document.createElement("div");
+                    actionIcons.classList.add("action-icons");
+
+                    // Download icon
+                    if (isAvailable) {
+                        const downloadBtn = document.createElement("button");
+                        downloadBtn.onclick = () => downloadFile(file.file_id);
+                        downloadBtn.innerHTML = `<img src="/resources/download.svg" alt="Download">`;
+                        actionIcons.appendChild(downloadBtn);
+                    }
+
+                    // Delete and share icons if owned by current user
+                    if (isOwnedByCurrentUser) {
+                        const deleteBtn = document.createElement("button");
+                        deleteBtn.onclick = () => deleteFile(file.file_id);
+                        deleteBtn.innerHTML = `<img src="/resources/delete.svg" alt="Delete">`;
+                        actionIcons.appendChild(deleteBtn);
+
+                        if (isAvailable) {
+                            const shareBtn = document.createElement("button");
+                            shareBtn.onclick = () => showShareModal(file.file_id);
+                            shareBtn.innerHTML = `<img src="/resources/share.svg" alt="Share">`;
+                            actionIcons.appendChild(shareBtn);
+                        }
+                    }
+
+                    actionsCell.appendChild(actionIcons);
+                    row.appendChild(actionsCell);
+
+                    fileRows.push(row);
+                    tbody.appendChild(row);
+                });
+            }
+
+            fileTable.appendChild(tbody);
+            fileListContainer.appendChild(fileTable);
+        } else {
+            fileListContainer.innerHTML = "<p>No files available.</p>";
+        }
+    }
+
+
+    // Group files by a key
+    function groupBy(array, key) {
+        return array.reduce((result, currentValue) => {
+            (result[currentValue[key]] = result[currentValue[key]] || []).push(currentValue);
+            return result;
+        }, {});
+    }
+
+    // Download File
+    async function downloadFile(fileId) {
+        const response = await fetch(`/download_file/${fileId}`);
+        if (response.ok) {
+            const contentDisposition = response.headers.get("Content-Disposition");
+            let filename = `file_${fileId}`;
+            if (contentDisposition) {
+                const filenameStarMatch = contentDisposition.match(/filename\*\s*=\s*UTF-8''([^;]+)/);
+                if (filenameStarMatch) {
+                    filename = decodeURIComponent(filenameStarMatch[1]);
+                } else {
+                    const filenameMatch = contentDisposition.match(/filename\s*=\s*["']?([^;"']+)["']?/);
+                    if (filenameMatch) {
+                        filename = filenameMatch[1];
+                    }
+                }
+            }
+
+            const blob = await response.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = downloadUrl;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } else {
+            const result = await response.json();
+            alert(result.message || "Failed to download file.");
+        }
+        await listFiles();
+    }
+
+    // Delete File
+    async function deleteFile(fileId) {
+        const response = await fetch(`/delete_file/${fileId}`, {method: "DELETE"});
+        const result = await response.json();
+        alert(result.message || "File deleted successfully.");
+        await listFiles();
+    }
+
+    // Show Share Modal
+    function showShareModal(fileId) {
+        document.getElementById("shareFileId").value = fileId;
+        toggleModal('share-modal');
+    }
+
+    // Share File
+    async function shareFile(event) {
+        event.preventDefault();
+        const fileId = parseInt(document.getElementById("shareFileId").value);
+        const shareWithUsername = document.getElementById("shareWithUsername").value;
+
+        if (!fileId || !shareWithUsername) {
+            alert("Please provide valid inputs.");
+            return;
+        }
+
+        const response = await fetch("/share_file", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                file_id: fileId,
+                share_with_username: shareWithUsername
+            })
+        });
+
+        const result = await response.json();
+        alert(result.message || "File shared successfully.");
+        toggleModal('share-modal');
+        await listFiles();
+    }
+
+    // Upload File
+    async function uploadFile(event) {
+        event.preventDefault();
+        const fileInput = document.getElementById("fileInput");
+        const downloadLimit = parseInt(document.getElementById("downloadLimit").value);
+        const expirationValue = parseInt(document.getElementById("expirationValue").value);
+        const expirationUnit = document.getElementById("expirationUnit").value;
+
+        const expirationMultiplier = {
+            seconds: 1,
+            minutes: 60,
+            hours: 3600,
+            days: 86400
+        };
+        const expirationDelta = expirationValue * (expirationMultiplier[expirationUnit] || 1);
+
+        if (!fileInput.files.length) {
+            alert("Please select a file to upload.");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append("file", fileInput.files[0]);
+        formData.append("download_limit", downloadLimit);
+        formData.append("expiration_delta", expirationDelta);
+
+        const response = await fetch("/upload_file", {
+            method: "POST",
+            body: formData
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            alert(result.message || "Failed to upload file.");
+            return;
+        }
+        alert(result.message || "File uploaded successfully.");
+        toggleModal('upload-modal');
+        await listFiles();
+    }
+</script>
+</body>
+</html>

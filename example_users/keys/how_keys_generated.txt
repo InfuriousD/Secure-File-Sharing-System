@@ -1,0 +1,21 @@
+Use:
+
+```
+#!/bin/bash
+
+# Create the keys directory if it doesn't exist
+mkdir -p keys
+
+# Generate ECDSA and ECIES keys for users 1-5
+for i in {1..5}; do
+  # Generate ECDSA keys (for authentication)
+  openssl ecparam -name prime256v1 -genkey -noout -out keys/user${i}_ecdsa_private_key.pem
+  openssl ec -in keys/user${i}_ecdsa_private_key.pem -pubout -out keys/user${i}_ecdsa_public_key.pem
+
+  # Generate ECIES (ECDH) keys (for key encryption)
+  openssl ecparam -name prime256v1 -genkey -noout -out keys/user${i}_ecdh_private_key.pem
+  openssl ec -in keys/user${i}_ecdh_private_key.pem -pubout -out keys/user${i}_ecdh_public_key.pem
+done
+
+echo "ECDSA and ECIES keys have been generated for users 1-5."
+```
