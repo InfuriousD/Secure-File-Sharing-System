@@ -74,7 +74,7 @@ client-side before upload, and access control is maintained by securely sharing 
     - Implement a mechanism to deduplicate files on the server side to save storage space.
 
 ### Authors :
-**1)Mayank Garg**
-**2)Guangyan An**
-**3)Yash Kishore** 
+-**1)Mayank Garg**
+-**2)Guangyan An**
+-**3)Yash Kishore** 
   
