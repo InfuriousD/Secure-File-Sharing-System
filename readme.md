@@ -73,6 +73,8 @@ client-side before upload, and access control is maintained by securely sharing 
 - **Deduplication of Encrypted Files**:
     - Implement a mechanism to deduplicate files on the server side to save storage space.
 
-- **File Integrity Verification**:
-    - ~~Implement a mechanism to verify the integrity of the file during upload~~ and download (Do we need that?).
-    - ~~Implement HMAC[AES-GCM]-based file integrity verification.~~
+- **Authors**:
+1)Mayank Garg
+2)Guangyan An
+3)Yash Kishore 
+  
